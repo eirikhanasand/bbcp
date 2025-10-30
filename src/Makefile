@@ -4,6 +4,58 @@
 # Additionally, this make file is easily modifiable for test environments.
 #
 
+# ------------------------------- macOS patch ----------------------------------
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S),Darwin)
+
+# Detects Homebrew OpenSSL@3
+OPENSSL_PREFIX := $(shell brew --prefix openssl@3 2>/dev/null)
+
+# Installs OpenSSL@3 if missing
+ifeq ($(OPENSSL_PREFIX),)
+all: install_openssl
+else
+all: openssl_fix
+endif
+
+all: check_openssl
+
+install_openssl:
+	@echo "⚠️ OpenSSL@3 not found, installing via Homebrew..."
+	@which brew >/dev/null || { echo "Homebrew not found. Please install it first: https://brew.sh"; exit 1; }
+	brew install openssl@3
+	$(MAKE) openssl_fix
+
+openssl_fix:
+	@echo "OpenSSL@3 is installed at $(shell brew --prefix openssl@3)"
+	@echo "Creating unversioned symlinks for libcrypto and libssl..."
+
+check_openssl:
+	@echo "Checking for OpenSSL..."
+	@echo '#include <openssl/ssl.h>\nint main(){return 0;}' > /tmp/test_openssl.cpp
+	@clang++ /tmp/test_openssl.cpp -I$(shell brew --prefix openssl@3)/include \
+	     -L$(shell brew --prefix openssl@3)/lib -lcrypto -lssl -o /tmp/test_openssl \
+	     >/dev/null 2>&1 || { echo "OpenSSL/crypto not found! Please install OpenSSL@3 via Homebrew."; exit 1; }
+	@rm -f /tmp/test_openssl.cpp /tmp/test_openssl
+	@echo "OpenSSL/crypto found"
+
+post_install:
+	@echo "Adding $(BINDIR) to your PATH in ~/.zshrc ..."
+	@grep -qxF 'export PATH=$$PATH:$(BINDIR)' ~/.zshrc || \
+	    echo 'export PATH=$$PATH:$(BINDIR)' >> ~/.zshrc
+	@echo "Done. Restart your terminal or run 'source ~/.zshrc' to use bbcp."
+
+# Compiles and links flags
+CPPFLAGS  += -I$(OPENSSL_PREFIX)/include
+CXXFLAGS  += -std=c++11 -Wno-error=narrowing -Wno-c++11-narrowing
+LDFLAGS   += -L$(OPENSSL_PREFIX)/lib
+LIBS      += -lcrypto -lssl
+
+endif
+# ------------------------------------------------------------------------------
+
+
 BINDIR     = ../bin/$(OSVER)
 
 OBJDIR     = ../obj/$(OSVER)
@@ -230,7 +282,7 @@ Darwin:
 	LIBS="$(MACLIBS)" \
 	MD5HEADER=bbcp_MD5_openssl.h \
 	OBJMD5="$(OBJDIR)/bbcp_MD5_openssl.o"
-
+	@$(MAKE) post_install
 
 UNICOS/mp:
 	@make $(MKPARMS)  \
@@ -268,7 +320,7 @@ Sungcc:
 
 $(TARGET): $(OBJECT)
 	@echo Creating executable $(TARGET) ...
-	@$(CC) $(OBJECT) $(LIBS) -o $(TARGET)
+	@$(CC) $(OBJECT) $(LDFLAGS) $(LIBS) -o $(TARGET)
 
 $(OBJDIR)/bbcp.o: bbcp.C bbcp_Args.h bbcp_Config.h bbcp_Debug.h bbcp_FileSpec.h \
                   bbcp_LogFile.h bbcp_Node.h bbcp_Protocol.h bbcp_System.h \
