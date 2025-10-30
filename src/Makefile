@@ -41,10 +41,11 @@ check_openssl:
 	@echo "OpenSSL/crypto found"
 
 post_install:
-	@echo "Adding $(BINDIR) to your PATH in ~/.zshrc ..."
-	@grep -qxF 'export PATH=$$PATH:$(BINDIR)' ~/.zshrc || \
-	    echo 'export PATH=$$PATH:$(BINDIR)' >> ~/.zshrc
-	@echo "Done. Restart your terminal or run 'source ~/.zshrc' to use bbcp."
+	@ABS_BINDIR=$$(realpath $(BINDIR)); \
+	echo "Adding $$ABS_BINDIR to your PATH in ~/.zshrc ..."; \
+	grep -qxF "export PATH=\$$PATH:$$ABS_BINDIR" ~/.zshrc || \
+	    echo "export PATH=\$$PATH:$$ABS_BINDIR" >> ~/.zshrc; \
+	echo "Done. Restart your terminal or run 'source ~/.zshrc' to use bbcp."
 
 # Compiles and links flags
 CPPFLAGS  += -I$(OPENSSL_PREFIX)/include
