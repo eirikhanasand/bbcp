@@ -1,9 +1,19 @@
 bbcp
 ====
 
-Securely and quickly copy data from source to target.
+Securely and quickly copy data from source to target. Patched to work out of the box on macOS.
 
 ### Installation
+
+macOS
+```sh
+brew install git
+git clone https://github.com/eeertekin/bbcp.git
+cd bbcp/src
+make
+source ~/.zshrc # or .bashrc if you use that
+bbcp --version
+```
 
 Ubuntu 12.04 LTS
 
