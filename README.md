@@ -22,6 +22,7 @@ apt-get update
 apt-get install libssl-dev build-essential zlib1g-dev git
 git clone https://github.com/eeertekin/bbcp.git
 cd bbcp/src
+ln -s /usr/lib/x86_64-linux-gnu/libnsl.so.1 /usr/lib/x86_64-linux-gnu/libnsl.so
 make
 cp ../bin/amd64_linux/bbcp /bin/bbcp
 bbcp --version
